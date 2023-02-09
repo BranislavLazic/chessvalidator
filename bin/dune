@@ -1,0 +1,6 @@
+(executable
+ (public_name chessvalidator)
+ (name main)
+ (libraries chess)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord)))

@@ -1,0 +1,3 @@
+(tests
+ (names chess_test)
+ (libraries ounit2 chess))
