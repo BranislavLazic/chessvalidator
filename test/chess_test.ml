@@ -87,6 +87,22 @@ let test_update_chessboard _ =
      pppppppp\n\
      rnbqkbnr\n"
 
+let test_update_chessboard_and_find _ =
+  assert_equal
+    (Option.get
+       (find_source_piece init_chessboard
+          { from_col = 0; to_col = 0; from_row = 1; to_row = 3 }))
+    { piece = Pawn false; color = Black; row = 1; col = 0 };
+  let new_chessboard =
+    update_chessboard init_chessboard
+      { from_col = 0; to_col = 0; from_row = 1; to_row = 3 }
+  in
+  assert_equal
+    (Option.get
+       (find_source_piece new_chessboard
+          { from_col = 0; to_col = 0; from_row = 3; to_row = 4 }))
+    { piece = Pawn true; color = Black; row = 3; col = 0 }
+
 let suite =
   "Chess"
   >::: [
@@ -105,6 +121,7 @@ let suite =
          "test_vertical_move_diff" >:: test_vertical_move_diff;
          "test_vertical_move_diff_back" >:: test_vertical_move_diff_back;
          "test_update_chessboard" >:: test_update_chessboard;
+         "test_update_chessboard_and_find" >:: test_update_chessboard_and_find;
        ]
 
 let () = run_test_tt_main suite

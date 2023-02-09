@@ -66,43 +66,52 @@ let vertical_move_diff move =
   let res = move.to_row - move.from_row in
   if res < 0 then -1 * res else res
 
-let moves_horizontally move max_field_index_to_move =
+let get_max_move_index piece =
+  match piece with
+  | Rook | Queen | Bishop -> 7
+  | Pawn has_moved -> if has_moved then 1 else 2
+  | _ -> 1
+
+let moves_horizontally move piece =
   move.to_row = move.from_row
-  && horizontal_move_diff move <= max_field_index_to_move
+  && horizontal_move_diff move <= get_max_move_index piece
 
-let moves_vertically move max_field_index_to_move =
+let moves_vertically move piece =
   move.to_col = move.from_col
-  && vertical_move_diff move <= max_field_index_to_move
+  && vertical_move_diff move <= get_max_move_index piece
 
-let moves_diagonally move max_field_index_to_move =
+let moves_diagonally move piece =
   vertical_move_diff move = horizontal_move_diff move
-  && vertical_move_diff move <= max_field_index_to_move
+  && vertical_move_diff move <= get_max_move_index piece
 
-let moves_omni_directionally move max_field_index_to_move =
-  moves_horizontally move max_field_index_to_move
-  || moves_vertically move max_field_index_to_move
-  || moves_diagonally move max_field_index_to_move
+let moves_omni_directionally move piece =
+  moves_horizontally move piece
+  || moves_vertically move piece
+  || moves_diagonally move piece
 
-let moves_forward_vertically move color max_field_index_to_move =
+let moves_forward_vertically move color piece =
   let row_diff = move.from_row - move.to_row in
   let is_forward = if color = White then row_diff > 0 else row_diff < 0 in
-  is_forward && moves_vertically move max_field_index_to_move
+  is_forward && moves_vertically move piece
 
-let moves_pawn move has_moved source_piece dest_piece =
-  moves_forward_vertically move source_piece.color (if has_moved then 1 else 2)
-  || (moves_diagonally move 1 && source_piece.color != dest_piece.color)
+let moves_pawn move source_piece dest_piece =
+  moves_forward_vertically move source_piece.color source_piece.piece
+  || moves_diagonally move source_piece.piece
+     && source_piece.color != dest_piece.color
 
 let is_direction_valid move source_piece dest_piece =
+  let src_piece = source_piece.piece in
   let is_valid =
-    match source_piece.piece with
-    | Pawn has_moved -> moves_pawn move has_moved source_piece dest_piece
-    | Rook -> moves_horizontally move 7 || moves_vertically move 7
-    | Bishop -> moves_diagonally move 7
+    match src_piece with
+    | Pawn _ -> moves_pawn move source_piece dest_piece
+    | Rook ->
+        moves_horizontally move src_piece || moves_vertically move src_piece
+    | Bishop -> moves_diagonally move src_piece
     | Knight ->
         (vertical_move_diff move = 2 && horizontal_move_diff move = 1)
         || (vertical_move_diff move = 1 && horizontal_move_diff move = 2)
-    | Queen -> moves_omni_directionally move 7
-    | King -> moves_omni_directionally move 1
+    | Queen -> moves_omni_directionally move src_piece
+    | King -> moves_omni_directionally move src_piece
   in
   if is_valid then Either.Right move else Either.Left "Invalid direction"
 
@@ -122,16 +131,16 @@ let validate_move chessboard move =
       collect_either [ is_move_within_bounds move; has_moved move ]
   | _ -> Left "Piece not found"
 
-let lowercase_pieces p =
-  if p.color = White then String.lowercase_ascii (to_string p.piece)
-  else to_string p.piece
+let lowercase_piece piece =
+  if piece.color = White then String.lowercase_ascii (to_string piece.piece)
+  else to_string piece.piece
 
 let to_ascii pieces =
   List.fold_left
     (fun a p ->
       if (String.length a + 2) mod 9 = 0 && String.length a != 0 then
-        sprintf "%s%s\n" a (Option.map lowercase_pieces p |> get_or_else "*")
-      else sprintf "%s%s" a (Option.map lowercase_pieces p |> get_or_else "*"))
+        sprintf "%s%s\n" a (Option.map lowercase_piece p |> get_or_else "*")
+      else sprintf "%s%s" a (Option.map lowercase_piece p |> get_or_else "*"))
     String.empty pieces
 
 let init_chessboard =
@@ -160,8 +169,7 @@ let init_chessboard =
     add 0 Black @ add_pawns 1 Black @ add_empty @ add_pawns 6 White
     @ add 7 White
   in
-  let as_ascii = to_ascii pieces in
-  { pieces; as_ascii }
+  { pieces; as_ascii = to_ascii pieces }
 
 let update_chessboard chessboard move =
   let updated =
@@ -172,7 +180,16 @@ let update_chessboard chessboard move =
             if idx = (move.from_row * 8) + move.from_col then None else Some p
         | None ->
             if idx = (move.to_row * 8) + move.to_col then
-              find_source_piece chessboard move
+              Option.map
+                (fun p ->
+                  {
+                    piece =
+                      (if p.piece = Pawn false then Pawn true else p.piece);
+                    color = p.color;
+                    row = move.to_row;
+                    col = move.to_col;
+                  })
+                (find_source_piece chessboard move)
             else None)
       chessboard.pieces
   in
