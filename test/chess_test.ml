@@ -31,13 +31,13 @@ let test_validate_move _ =
   assert_equal
     (validate_move init_chessboard
        { from_col = 1; to_col = 1; from_row = 1; to_row = 3 })
-    (Right { from_col = 1; to_col = 1; from_row = 1; to_row = 3 })
+    (Ok { from_col = 1; to_col = 1; from_row = 1; to_row = 3 })
 
 let test_validate_move_dest_piece_is_friendly _ =
   assert_equal
     (validate_move init_chessboard
        { from_col = 0; to_col = 0; from_row = 0; to_row = 1 })
-    (Left "Not opponents piece")
+    (Error "Not opponents piece")
 
 let test_find_dest_piece _ =
   assert_equal
@@ -49,7 +49,7 @@ let test_is_move_within_bounds _ =
   assert_equal
     (is_move_within_bounds
        { from_col = 1; to_col = 10; from_row = 0; to_row = 1 })
-    (Either.Left "The move is not within the chessboard bounds")
+    (Error "The move is not within the chessboard bounds")
 
 let test_horizontal_move_diff _ =
   assert_equal
@@ -87,6 +87,20 @@ let test_update_chessboard _ =
      pppppppp\n\
      rnbqkbnr\n"
 
+let test_update_chessboard_replace_piece _ =
+  assert_equal
+    (update_chessboard init_chessboard
+       { from_col = 0; to_col = 2; from_row = 1; to_row = 7 })
+      .as_ascii
+    "RNBQKBNR\n\
+     *PPPPPPP\n\
+     ********\n\
+     ********\n\
+     ********\n\
+     ********\n\
+     pppppppp\n\
+     rnPqkbnr\n"
+
 let test_update_chessboard_and_find _ =
   assert_equal
     (Option.get
@@ -122,6 +136,8 @@ let suite =
          "test_vertical_move_diff_back" >:: test_vertical_move_diff_back;
          "test_update_chessboard" >:: test_update_chessboard;
          "test_update_chessboard_and_find" >:: test_update_chessboard_and_find;
+         "test_update_chessboard_replace_piece"
+         >:: test_update_chessboard_replace_piece;
        ]
 
 let () = run_test_tt_main suite

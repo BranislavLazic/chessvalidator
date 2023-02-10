@@ -23,7 +23,7 @@ type chessboard = { pieces : piece option list; as_ascii : string }
 
 let get_or_else alt opt = match opt with Some a -> a | None -> alt
 let flatten opt = match opt with Some (Some a) -> Some a | _ -> None
-let collect_either eiths = List.fold_left (fun _ e -> e) (Either.Left "") eiths
+let collect_either eiths = List.fold_left (fun _ e -> e) (Error "") eiths
 
 let find_source_piece chessboard move =
   List.find_opt
@@ -46,17 +46,16 @@ let is_move_within_bounds move =
     List.for_all
       (fun m -> m >= 0 && m <= 7)
       [ move.from_col; move.from_row; move.to_col; move.to_row ]
-  then Either.Right move
-  else Either.Left "The move is not within the chessboard bounds"
+  then Ok move
+  else Error "The move is not within the chessboard bounds"
 
 let has_moved move =
-  if move.from_row != move.to_row || move.from_col != move.to_col then
-    Either.Right move
-  else Either.Left "Did not move"
+  if move.from_row != move.to_row || move.from_col != move.to_col then Ok move
+  else Error "Did not move"
 
 let is_opponents_piece source_piece dest_piece move =
-  if source_piece.color != dest_piece.color then Either.Right move
-  else Either.Left "Not opponents piece"
+  if source_piece.color != dest_piece.color then Ok move
+  else Error "Not opponents piece"
 
 let horizontal_move_diff move =
   let res = move.to_col - move.from_col in
@@ -113,7 +112,7 @@ let is_direction_valid move source_piece dest_piece =
     | Queen -> moves_omni_directionally move src_piece
     | King -> moves_omni_directionally move src_piece
   in
-  if is_valid then Either.Right move else Either.Left "Invalid direction"
+  if is_valid then Ok move else Error "Invalid direction"
 
 let validate_move chessboard move =
   match
@@ -129,7 +128,7 @@ let validate_move chessboard move =
         ]
   | Some _, None ->
       collect_either [ is_move_within_bounds move; has_moved move ]
-  | _ -> Left "Piece not found"
+  | _ -> Error "Piece not found"
 
 let lowercase_piece piece =
   if piece.color = White then String.lowercase_ascii (to_string piece.piece)
@@ -171,31 +170,32 @@ let init_chessboard =
   in
   { pieces; as_ascii = to_ascii pieces }
 
+let update_piece chessboard move =
+  Option.map
+    (fun p ->
+      {
+        piece = (if p.piece = Pawn false then Pawn true else p.piece);
+        color = p.color;
+        row = move.to_row;
+        col = move.to_col;
+      })
+    (find_source_piece chessboard move)
+
 let update_chessboard chessboard move =
   let updated =
     List.mapi
       (fun idx piece ->
         match piece with
-        | Some p ->
-            if idx = (move.from_row * 8) + move.from_col then None else Some p
-        | None ->
-            if idx = (move.to_row * 8) + move.to_col then
-              Option.map
-                (fun p ->
-                  {
-                    piece =
-                      (if p.piece = Pawn false then Pawn true else p.piece);
-                    color = p.color;
-                    row = move.to_row;
-                    col = move.to_col;
-                  })
-                (find_source_piece chessboard move)
-            else None)
+        | Some _ when idx = (move.from_row * 8) + move.from_col -> None
+        | (Some _ | None) when idx = (move.to_row * 8) + move.to_col ->
+            update_piece chessboard move
+        | Some _ -> piece
+        | _ -> None)
       chessboard.pieces
   in
   { pieces = updated; as_ascii = to_ascii updated }
 
 let advance chessboard move =
-  Either.map_right
+  Result.map
     (fun m -> update_chessboard chessboard m)
     (validate_move chessboard move)
