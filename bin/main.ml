@@ -21,4 +21,11 @@ let read_moves file =
            to_row = 56 - Char.code (List.nth chars 3);
          })
 
-let () = advance_all init_chessboard (read_moves "test_data.txt")
+let () =
+  if Array.length Sys.argv - 1 < 1 then print_endline "Provide a file"
+  else
+    for i = 1 to Array.length Sys.argv - 1 do
+      let file = Sys.argv.(i) in
+      if Sys.file_exists file then advance_all init_chessboard (read_moves file)
+      else print_endline "The file is not found"
+    done
