@@ -55,7 +55,8 @@ let has_moved move =
   move.from_row != move.to_row || move.from_col != move.to_col
 
 let is_opponents_piece source_piece dest_piece =
-  source_piece.color != dest_piece.color
+  Option.map (fun dest -> source_piece.color != dest.color) dest_piece
+  |> get_or_else true
 
 let horizontal_move_diff move =
   let res = move.to_col - move.from_col in
@@ -93,15 +94,16 @@ let moves_forward_vertically move color piece =
   let is_forward = if color = White then row_diff > 0 else row_diff < 0 in
   is_forward && moves_vertically move piece
 
-let moves_pawn move source_piece dest_piece =
+let moves_pawn move source_piece dest_piece_opt =
   moves_forward_vertically move source_piece.color source_piece.piece
   || moves_diagonally move source_piece.piece
-     && source_piece.color != dest_piece.color
+     && Option.map (fun dest -> source_piece.color != dest.color) dest_piece_opt
+        |> get_or_else true
 
-let is_direction_valid move source_piece dest_piece =
+let is_direction_valid move source_piece dest_piece_opt =
   let src_piece = source_piece.piece in
   match src_piece with
-  | Pawn _ -> moves_pawn move source_piece dest_piece
+  | Pawn _ -> moves_pawn move source_piece dest_piece_opt
   | Rook -> moves_horizontally move src_piece || moves_vertically move src_piece
   | Bishop -> moves_diagonally move src_piece
   | Knight ->
@@ -114,15 +116,12 @@ let validate_move chessboard move =
   match
     (find_source_piece chessboard move, find_dest_piece chessboard move)
   with
-  | Some source_piece, Some dest_piece ->
+  | Some source_piece, dest_piece_opt ->
       if
-        is_move_within_bounds move
-        && is_direction_valid move source_piece dest_piece
-        && is_opponents_piece source_piece dest_piece
+        is_move_within_bounds move && has_moved move
+        && is_direction_valid move source_piece dest_piece_opt
+        && is_opponents_piece source_piece dest_piece_opt
       then Ok move
-      else Error (sprintf "%s -> %s" "Invalid move" move.display)
-  | Some _, None ->
-      if is_move_within_bounds move && has_moved move then Ok move
       else Error (sprintf "%s -> %s" "Invalid move" move.display)
   | _ -> Error "Piece not found"
 

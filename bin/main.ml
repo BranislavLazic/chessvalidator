@@ -1,10 +1,24 @@
 open Chess
 
-let () =
-  advance_all init_chessboard
-    [
-      { display = "C2C4"; from_col = 2; to_col = 2; from_row = 1; to_row = 3 };
-      { display = "B8C6"; from_col = 1; to_col = 2; from_row = 0; to_row = 2 };
-      { display = "B2B4"; from_col = 1; to_col = 1; from_row = 6; to_row = 4 };
-      { display = "C2C3"; from_col = 2; to_col = 2; from_row = 6; to_row = 5 };
-    ]
+let lines file =
+  let contents =
+    match file with
+    | "-" -> In_channel.input_all In_channel.stdin
+    | file -> In_channel.with_open_bin file In_channel.input_all
+  in
+  String.split_on_char '\n' contents
+
+let read_moves file =
+  List.filter (fun l -> String.length l != 0) (lines file)
+  |> List.map String.lowercase_ascii
+  |> List.map (fun l ->
+         let chars = List.init (String.length l) (String.get l) in
+         {
+           display = l;
+           from_col = Char.code (List.nth chars 0) - 97;
+           to_col = Char.code (List.nth chars 2) - 97;
+           from_row = 56 - Char.code (List.nth chars 1);
+           to_row = 56 - Char.code (List.nth chars 3);
+         })
+
+let () = advance_all init_chessboard (read_moves "test_data.txt")

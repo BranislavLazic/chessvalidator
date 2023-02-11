@@ -39,6 +39,12 @@ let test_validate_move_invalid_pawn_move _ =
        { display = "B1B2"; from_col = 1; to_col = 1; from_row = 1; to_row = 6 })
     (Error "Invalid move -> B1B2")
 
+let test_validate_move_invalid_rook_move _ =
+  assert_equal
+    (validate_move init_chessboard
+       { display = "A8C6"; from_col = 0; to_col = 2; from_row = 0; to_row = 2 })
+    (Error "Invalid move -> A8C6")
+
 let test_validate_move_dest_piece_is_friendly _ =
   assert_equal
     (validate_move init_chessboard
@@ -148,6 +154,8 @@ let suite =
          "test_update_chessboard_and_find" >:: test_update_chessboard_and_find;
          "test_update_chessboard_replace_piece"
          >:: test_update_chessboard_replace_piece;
+         "test_validate_move_invalid_rook_move"
+         >:: test_validate_move_invalid_rook_move;
        ]
 
 let () = run_test_tt_main suite
