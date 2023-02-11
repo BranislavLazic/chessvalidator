@@ -9,12 +9,12 @@ let lines file =
   String.split_on_char '\n' contents
 
 let read_moves file =
-  List.filter (fun l -> String.length l != 0) (lines file)
+  List.filter (fun line -> String.length line != 0) (lines file)
   |> List.map String.lowercase_ascii
-  |> List.map (fun l ->
-         let chars = List.init (String.length l) (String.get l) in
+  |> List.map (fun line ->
+         let chars = List.init (String.length line) (String.get line) in
          {
-           display = l;
+           display = line;
            from_col = Char.code (List.nth chars 0) - 97;
            to_col = Char.code (List.nth chars 2) - 97;
            from_row = 56 - Char.code (List.nth chars 1);
