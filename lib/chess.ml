@@ -7,7 +7,7 @@ type piece' = Pawn of bool | Rook | Bishop | Knight | Queen | King
 and piece = { piece : piece'; color : color; row : int; col : int }
 [@@deriving show]
 
-let to_string piece =
+let to_abbreviation piece =
   match piece with
   | Pawn _ -> "P"
   | Rook -> "R"
@@ -16,14 +16,19 @@ let to_string piece =
   | Queen -> "Q"
   | King -> "K"
 
-type move = { from_col : int; to_col : int; from_row : int; to_row : int }
+type move = {
+  display : string;
+  from_col : int;
+  to_col : int;
+  from_row : int;
+  to_row : int;
+}
 [@@deriving show]
 
 type chessboard = { pieces : piece option list; as_ascii : string }
 
 let get_or_else alt opt = match opt with Some a -> a | None -> alt
 let flatten opt = match opt with Some (Some a) -> Some a | _ -> None
-let collect_either eiths = List.fold_left (fun _ e -> e) (Error "") eiths
 
 let find_source_piece chessboard move =
   List.find_opt
@@ -42,20 +47,15 @@ let find_dest_piece chessboard move =
   |> flatten
 
 let is_move_within_bounds move =
-  if
-    List.for_all
-      (fun m -> m >= 0 && m <= 7)
-      [ move.from_col; move.from_row; move.to_col; move.to_row ]
-  then Ok move
-  else Error "The move is not within the chessboard bounds"
+  List.for_all
+    (fun m -> m >= 0 && m <= 7)
+    [ move.from_col; move.from_row; move.to_col; move.to_row ]
 
 let has_moved move =
-  if move.from_row != move.to_row || move.from_col != move.to_col then Ok move
-  else Error "Did not move"
+  move.from_row != move.to_row || move.from_col != move.to_col
 
-let is_opponents_piece source_piece dest_piece move =
-  if source_piece.color != dest_piece.color then Ok move
-  else Error "Not opponents piece"
+let is_opponents_piece source_piece dest_piece =
+  source_piece.color != dest_piece.color
 
 let horizontal_move_diff move =
   let res = move.to_col - move.from_col in
@@ -100,39 +100,36 @@ let moves_pawn move source_piece dest_piece =
 
 let is_direction_valid move source_piece dest_piece =
   let src_piece = source_piece.piece in
-  let is_valid =
-    match src_piece with
-    | Pawn _ -> moves_pawn move source_piece dest_piece
-    | Rook ->
-        moves_horizontally move src_piece || moves_vertically move src_piece
-    | Bishop -> moves_diagonally move src_piece
-    | Knight ->
-        (vertical_move_diff move = 2 && horizontal_move_diff move = 1)
-        || (vertical_move_diff move = 1 && horizontal_move_diff move = 2)
-    | Queen -> moves_omni_directionally move src_piece
-    | King -> moves_omni_directionally move src_piece
-  in
-  if is_valid then Ok move else Error "Invalid direction"
+  match src_piece with
+  | Pawn _ -> moves_pawn move source_piece dest_piece
+  | Rook -> moves_horizontally move src_piece || moves_vertically move src_piece
+  | Bishop -> moves_diagonally move src_piece
+  | Knight ->
+      (vertical_move_diff move = 2 && horizontal_move_diff move = 1)
+      || (vertical_move_diff move = 1 && horizontal_move_diff move = 2)
+  | Queen -> moves_omni_directionally move src_piece
+  | King -> moves_omni_directionally move src_piece
 
 let validate_move chessboard move =
   match
     (find_source_piece chessboard move, find_dest_piece chessboard move)
   with
   | Some source_piece, Some dest_piece ->
-      collect_either
-        [
-          is_move_within_bounds move;
-          has_moved move;
-          is_direction_valid move source_piece dest_piece;
-          is_opponents_piece source_piece dest_piece move;
-        ]
+      if
+        is_move_within_bounds move
+        && is_direction_valid move source_piece dest_piece
+        && is_opponents_piece source_piece dest_piece
+      then Ok move
+      else Error (sprintf "%s -> %s" "Invalid move" move.display)
   | Some _, None ->
-      collect_either [ is_move_within_bounds move; has_moved move ]
+      if is_move_within_bounds move && has_moved move then Ok move
+      else Error (sprintf "%s -> %s" "Invalid move" move.display)
   | _ -> Error "Piece not found"
 
 let lowercase_piece piece =
-  if piece.color = White then String.lowercase_ascii (to_string piece.piece)
-  else to_string piece.piece
+  if piece.color = White then
+    String.lowercase_ascii (to_abbreviation piece.piece)
+  else to_abbreviation piece.piece
 
 let to_ascii pieces =
   List.fold_left
@@ -199,3 +196,13 @@ let advance chessboard move =
   Result.map
     (fun m -> update_chessboard chessboard m)
     (validate_move chessboard move)
+
+let rec advance_all chessboard moves =
+  match moves with
+  | [] -> ()
+  | head :: tail -> (
+      match advance chessboard head with
+      | Ok board ->
+          print_endline board.as_ascii;
+          advance_all board tail
+      | Error err -> print_endline err)
