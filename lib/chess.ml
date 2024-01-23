@@ -1,5 +1,3 @@
-open Printf
-
 type color = Black | White [@@deriving show]
 
 type piece' = Pawn of bool | Rook | Bishop | Knight | Queen | King
@@ -122,7 +120,7 @@ let validate_move chessboard move =
         && is_direction_valid move source_piece dest_piece_opt
         && is_opponents_piece source_piece dest_piece_opt
       then Ok move
-      else Error (sprintf "%s -> %s" "Invalid move" move.display)
+      else Error (Printf.sprintf "%s -> %s" "Invalid move" move.display)
   | _ -> Error "Piece not found"
 
 let lowercase_piece piece =
@@ -134,8 +132,8 @@ let to_ascii pieces =
   List.fold_left
     (fun a p ->
       if (String.length a + 2) mod 9 = 0 && String.length a != 0 then
-        sprintf "%s%s\n" a (Option.map lowercase_piece p |> get_or_else "*")
-      else sprintf "%s%s" a (Option.map lowercase_piece p |> get_or_else "*"))
+        Printf.sprintf "%s%s\n" a (Option.map lowercase_piece p |> get_or_else "*")
+      else Printf.sprintf "%s%s" a (Option.map lowercase_piece p |> get_or_else "*"))
     String.empty pieces
 
 let init_chessboard =
@@ -205,3 +203,4 @@ let rec advance_all chessboard moves =
           print_endline board.as_ascii;
           advance_all board tail
       | Error err -> print_endline err)
+
