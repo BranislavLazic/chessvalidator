@@ -17,14 +17,16 @@ let test_init_chessboard_as_ascii _ =
 
 let test_find_source_knight _ =
   assert_equal
-    (find_source_piece init_chessboard
-       { display = "B1F2"; from_col = 1; to_col = 2; from_row = 0; to_row = 1 })
+    (find_source_piece
+       { display = "B1F2"; from_col = 1; to_col = 2; from_row = 0; to_row = 1 }
+       init_chessboard)
     (Some { piece = Knight; color = Black; row = 0; col = 1 })
 
 let test_find_source_pawn _ =
   assert_equal
-    (find_source_piece init_chessboard
-       { display = ""; from_col = 1; to_col = 1; from_row = 1; to_row = 2 })
+    (find_source_piece
+       { display = ""; from_col = 1; to_col = 1; from_row = 1; to_row = 2 }
+       init_chessboard)
     (Some { piece = Pawn false; color = Black; row = 1; col = 1 })
 
 let test_validate_move _ =
@@ -53,8 +55,9 @@ let test_validate_move_dest_piece_is_friendly _ =
 
 let test_find_dest_piece _ =
   assert_equal
-    (find_dest_piece init_chessboard
-       { display = ""; from_col = 1; to_col = 10; from_row = 0; to_row = 1 })
+    (find_dest_piece
+       { display = ""; from_col = 1; to_col = 10; from_row = 0; to_row = 1 }
+       init_chessboard)
     None
 
 let test_is_move_within_bounds _ =
@@ -118,8 +121,9 @@ let test_update_chessboard_replace_piece _ =
 let test_update_chessboard_and_find _ =
   assert_equal
     (Option.get
-       (find_source_piece init_chessboard
-          { display = ""; from_col = 0; to_col = 0; from_row = 1; to_row = 3 }))
+       (find_source_piece
+          { display = ""; from_col = 0; to_col = 0; from_row = 1; to_row = 3 }
+          init_chessboard))
     { piece = Pawn false; color = Black; row = 1; col = 0 };
   let new_chessboard =
     update_chessboard init_chessboard
@@ -127,8 +131,9 @@ let test_update_chessboard_and_find _ =
   in
   assert_equal
     (Option.get
-       (find_source_piece new_chessboard
-          { display = ""; from_col = 0; to_col = 0; from_row = 3; to_row = 4 }))
+       (find_source_piece
+          { display = ""; from_col = 0; to_col = 0; from_row = 3; to_row = 4 }
+          new_chessboard))
     { piece = Pawn true; color = Black; row = 3; col = 0 }
 
 let suite =

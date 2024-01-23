@@ -28,21 +28,17 @@ type chessboard = { pieces : piece option list; as_ascii : string }
 let get_or_else alt opt = match opt with Some a -> a | None -> alt
 let flatten opt = match opt with Some (Some a) -> Some a | _ -> None
 
-let find_source_piece chessboard move =
+let find_piece cond chessboard =
   List.find_opt
-    (fun piece ->
-      Option.map (fun p -> p.row = move.from_row && p.col = move.from_col) piece
-      |> get_or_else false)
+    (fun piece -> Option.map cond piece |> get_or_else false)
     chessboard.pieces
   |> flatten
 
-let find_dest_piece chessboard move =
-  List.find_opt
-    (fun piece ->
-      Option.map (fun p -> p.row = move.to_row && p.col = move.to_col) piece
-      |> get_or_else false)
-    chessboard.pieces
-  |> flatten
+let find_source_piece move =
+  find_piece (fun p -> p.row = move.from_row && p.col = move.from_col)
+
+let find_dest_piece move =
+  find_piece (fun p -> p.row = move.to_row && p.col = move.to_col)
 
 let is_move_within_bounds move =
   List.for_all
@@ -112,7 +108,7 @@ let is_direction_valid move source_piece dest_piece_opt =
 
 let validate_move chessboard move =
   match
-    (find_source_piece chessboard move, find_dest_piece chessboard move)
+    (find_source_piece move chessboard, find_dest_piece move chessboard)
   with
   | Some source_piece, dest_piece_opt ->
       if
@@ -132,8 +128,10 @@ let to_ascii pieces =
   List.fold_left
     (fun a p ->
       if (String.length a + 2) mod 9 = 0 && String.length a != 0 then
-        Printf.sprintf "%s%s\n" a (Option.map lowercase_piece p |> get_or_else "*")
-      else Printf.sprintf "%s%s" a (Option.map lowercase_piece p |> get_or_else "*"))
+        Printf.sprintf "%s%s\n" a
+          (Option.map lowercase_piece p |> get_or_else "*")
+      else
+        Printf.sprintf "%s%s" a (Option.map lowercase_piece p |> get_or_else "*"))
     String.empty pieces
 
 let init_chessboard =
@@ -173,7 +171,7 @@ let update_piece chessboard move =
         row = move.to_row;
         col = move.to_col;
       })
-    (find_source_piece chessboard move)
+    (find_source_piece move chessboard)
 
 let update_chessboard chessboard move =
   let updated =
@@ -203,4 +201,3 @@ let rec advance_all chessboard moves =
           print_endline board.as_ascii;
           advance_all board tail
       | Error err -> print_endline err)
-
